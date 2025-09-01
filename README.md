@@ -314,8 +314,9 @@ This project is provided as-is for educational and research purposes.
 
 ## Version Information
 
-- **Version**: 0.2
+- **Version**: 0.1.0
 - **Build Target**: Linux/WSL
 - **C++ Standard**: C++17
 
 - **Primary Dependency**: libtins
+
