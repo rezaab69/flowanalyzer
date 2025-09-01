@@ -56,6 +56,10 @@ A high-performance C++ network traffic flow analyzer that extracts comprehensive
 The project includes an automated build script that handles dependency installation:
 
 ```bash
+# Clone project
+git clone https://github.com/rezaab69/flowanalyzer
+cd flowanalyzer
+
 # Make the build script executable
 chmod +x build_linux.sh
 
@@ -313,4 +317,5 @@ This project is provided as-is for educational and research purposes.
 - **Version**: 0.2
 - **Build Target**: Linux/WSL
 - **C++ Standard**: C++17
+
 - **Primary Dependency**: libtins
