@@ -18,6 +18,13 @@ Config getDefaultConfig() {
     config.includeFlowId = true;
     config.timestampFormat = "datetime";
     config.precision = 6;
+    
+    // Feature selection defaults
+    config.useSelectiveOutput = false;
+    config.enabledFeatureGroups.clear();
+    config.enabledFeatures.clear();
+    config.disabledFeatures.clear();
+    
     return config;
 }
 
@@ -37,6 +44,14 @@ Config getHighPerformanceConfig() {
     config.includeFlowId = true;
     config.timestampFormat = "unix";
     config.precision = 3;
+    
+    // Feature selection defaults - basic features only for performance
+    config.useSelectiveOutput = true;
+    config.enabledFeatureGroups.insert("BASIC");
+    config.enabledFeatureGroups.insert("TIMING");
+    config.enabledFeatures.clear();
+    config.disabledFeatures.clear();
+    
     return config;
 }
 
@@ -56,6 +71,13 @@ Config getDetailedAnalysisConfig() {
     config.includeFlowId = true;
     config.timestampFormat = "datetime";
     config.precision = 8;
+    
+    // Feature selection defaults - all features for detailed analysis
+    config.useSelectiveOutput = false;
+    config.enabledFeatureGroups.clear();
+    config.enabledFeatures.clear();
+    config.disabledFeatures.clear();
+    
     return config;
 }
 
@@ -75,6 +97,15 @@ Config getRealTimeConfig() {
     config.includeFlowId = true;
     config.timestampFormat = "unix";
     config.precision = 4;
+    
+    // Feature selection defaults - essential features for real-time
+    config.useSelectiveOutput = true;
+    config.enabledFeatureGroups.insert("BASIC");
+    config.enabledFeatureGroups.insert("TIMING");
+    config.enabledFeatureGroups.insert("FLAGS");
+    config.enabledFeatures.clear();
+    config.disabledFeatures.clear();
+    
     return config;
 }
 
@@ -116,6 +147,32 @@ bool validateConfig(const Config& config) {
         return false;
     }
     
+    // Validate feature selection if enabled
+    if (config.useSelectiveOutput) {
+        // Validate feature groups
+        for (const auto& group : config.enabledFeatureGroups) {
+            if (!FeatureGroups::isValidGroupName(group)) {
+                std::cerr << "Invalid feature group: " << group << std::endl;
+                return false;
+            }
+        }
+        
+        // Validate individual features
+        for (const auto& feature : config.enabledFeatures) {
+            if (!FeatureGroups::isValidFeatureName(feature)) {
+                std::cerr << "Invalid feature name: " << feature << std::endl;
+                return false;
+            }
+        }
+        
+        for (const auto& feature : config.disabledFeatures) {
+            if (!FeatureGroups::isValidFeatureName(feature)) {
+                std::cerr << "Invalid disabled feature name: " << feature << std::endl;
+                return false;
+            }
+        }
+    }
+    
     return true;
 }
 
@@ -148,4 +205,42 @@ void printConfig(const Config& config) {
     std::cout << "  include_flow_id: " << (config.includeFlowId ? "true" : "false") << std::endl;
     std::cout << "  timestamp_format: " << config.timestampFormat << std::endl;
     std::cout << "  precision: " << config.precision << std::endl;
+    
+    std::cout << "\nFeature Selection:" << std::endl;
+    std::cout << "  use_selective_output: " << (config.useSelectiveOutput ? "true" : "false") << std::endl;
+    
+    if (config.useSelectiveOutput) {
+        if (!config.enabledFeatureGroups.empty()) {
+            std::cout << "  enabled_feature_groups: ";
+            bool first = true;
+            for (const auto& group : config.enabledFeatureGroups) {
+                if (!first) std::cout << ", ";
+                std::cout << group;
+                first = false;
+            }
+            std::cout << std::endl;
+        }
+        
+        if (!config.enabledFeatures.empty()) {
+            std::cout << "  enabled_features: ";
+            bool first = true;
+            for (const auto& feature : config.enabledFeatures) {
+                if (!first) std::cout << ", ";
+                std::cout << feature;
+                first = false;
+            }
+            std::cout << std::endl;
+        }
+        
+        if (!config.disabledFeatures.empty()) {
+            std::cout << "  disabled_features: ";
+            bool first = true;
+            for (const auto& feature : config.disabledFeatures) {
+                if (!first) std::cout << ", ";
+                std::cout << feature;
+                first = false;
+            }
+            std::cout << std::endl;
+        }
+    }
 }

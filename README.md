@@ -1,4 +1,8 @@
-# Flow Meter C++ - Network Flow Feature Extractor
+# Flow Meter C++ - Advanced Network Flow Analysis Tool
+
+**Version**: 0.2.0  
+**Author**: Advanced Network Analysis Team  
+**License**: MIT
 
 A high-performance C++ application for extracting network flow features from PCAP files using PcapPlusPlus. This tool analyzes network traffic and generates comprehensive flow-level statistics suitable for network analysis, intrusion detection, and machine learning applications.
 
@@ -6,7 +10,8 @@ A high-performance C++ application for extracting network flow features from PCA
 
 ### Core Capabilities
 - **PCAP File Analysis**: Process network capture files to extract flow-level features
-- **89+ Flow Features**: Comprehensive feature extraction including packet statistics, timing analysis, and protocol-specific metrics
+- **120+ Flow Features**: Comprehensive feature extraction including packet statistics, timing analysis, protocol-specific metrics, entropy analysis, behavioral patterns, and advanced statistical measures
+- **Selective Feature Output**: Choose specific features or feature groups for customized analysis
 - **Multiple Configuration Modes**: Optimized presets for different use cases
 - **CSV Export**: Export extracted features to CSV format for further analysis
 - **Cross-Platform**: Supports Linux with automated build scripts
@@ -39,6 +44,21 @@ A high-performance C++ application for extracting network flow features from PCA
 - Subflow analysis
 - Segment size statistics
 - Connection flow time analysis
+
+#### Enhanced Features (New)
+- **Forward/Backward Ratios**: Packet and byte ratios between flow directions
+- **Entropy Analysis**: Payload and header entropy for randomness detection
+- **Application Protocol Detection**: Automatic protocol identification and TLS feature extraction
+- **Time-based Analysis**: Burstiness patterns and inter-arrival jitter measurements
+- **Behavioral Features**: Direction changes, flow persistence, and idle time analysis
+- **Network Context**: Internal/external traffic classification and port categorization
+- **Higher-order Statistics**: Skewness and kurtosis for packet length and timing distributions
+
+#### Feature Selection
+- **Selective Output**: Choose specific features or feature groups to include/exclude
+- **Predefined Feature Groups**: BASIC, TIMING, FLAGS, BULK, WINDOW, RETRANSMISSION, ICMP, STATISTICS, RATIOS, ENTROPY, PROTOCOL, BEHAVIORAL, NETWORK, HIGHER_ORDER
+- **Custom Feature Sets**: Mix and match individual features and groups
+- **Performance Optimization**: Reduce output size and processing time by selecting only needed features
 
 ## Requirements
 
@@ -87,10 +107,19 @@ The build script will:
 3. Compile the flow analyzer application
 
 ### Manual Build
+
+#### Linux/WSL
 ```bash
 # Ensure PcapPlusPlus is installed
 # Then compile the project
-g++ -std=c++17 -O3 -o flow_analyzer main.cpp flow_analyzer.cpp config.cpp \
+g++ -std=c++17 -O3 -I/usr/local/include -o flow_analyzer main.cpp flow_analyzer.cpp config.cpp \
+    -lPcap++ -lPacket++ -lCommon++ -lpcap -pthread
+```
+
+#### Windows (using WSL)
+```bash
+# From Windows PowerShell/Command Prompt
+wsl g++ -std=c++17 -O3 -I/usr/local/include -o flow_analyzer main.cpp flow_analyzer.cpp config.cpp \
     -lPcap++ -lPacket++ -lCommon++ -lpcap -pthread
 ```
 
@@ -158,13 +187,74 @@ Optional arguments:
   -v, --verbose         Enable verbose output
   --show-config         Show configuration and exit
   --max-flows NUM       Maximum number of flows to process
+  --features LIST       Comma-separated list of specific features to include
+  --feature-groups LIST Comma-separated list of feature groups to include
+  --exclude-features LIST Comma-separated list of features to exclude
   -h, --help            Show help message and exit
 ```
 
+### Feature Groups
+
+The following predefined feature groups are available for selective output:
+
+#### Core Feature Groups
+- **BASIC**: Core flow information (Flow ID, IPs, ports, protocol, duration, packet counts)
+- **TIMING**: Time-based features (IAT statistics, flow rates, timestamps)
+- **FLAGS**: TCP flag analysis (SYN, ACK, FIN, RST, PSH, URG, CWR, ECE counts)
+- **BULK**: Bulk transfer detection features
+- **WINDOW**: TCP window size analysis
+- **RETRANSMISSION**: Retransmission detection and counting
+- **ICMP**: ICMP-specific features (code, type)
+- **STATISTICS**: Advanced statistical features (variance, standard deviation)
+
+#### Enhanced Feature Groups (New)
+- **RATIOS**: Forward/backward packet and byte ratios, average packet rates
+- **ENTROPY**: Payload and header entropy measurements for randomness analysis
+- **PROTOCOL**: Application protocol detection, TLS handshake features, cipher suite information
+- **BEHAVIORAL**: Direction change patterns, flow persistence, idle time characteristics
+- **NETWORK**: Internal/external traffic classification, port category analysis
+- **HIGHER_ORDER**: Statistical distribution measures (skewness, kurtosis) for packet lengths and timing
+
+## New Features Implementation
+
+This version includes significant enhancements with 30+ new features across 6 new feature groups:
+
+### Forward/Backward Ratio Features (RATIOS)
+- **Forward/Backward Packet Ratio**: Ratio of forward to backward packets
+- **Forward/Backward Byte Ratio**: Ratio of forward to backward bytes
+- **Average Packet Rate**: Overall packet transmission rate
+
+### Entropy-based Features (ENTROPY)
+- **Payload Entropy**: Randomness measure of packet payloads
+- **Header Entropy**: Randomness measure of packet headers
+
+### Application/Protocol Context (PROTOCOL)
+- **Application Protocol**: Automatic detection of application layer protocols
+- **TLS Certificate Count**: Number of certificates in TLS handshake
+- **TLS Cipher Suite**: Cipher suite used in TLS connections
+
+### Time-based Analysis (BEHAVIORAL)
+- **Burstiness**: Measure of traffic burstiness patterns
+- **Packet Inter-Arrival Jitter**: Variation in packet timing
+- **Direction Change Count**: Number of flow direction changes
+- **Average Idle Time**: Average time between active periods
+- **Flow Persistence**: Measure of flow continuity
+
+### Network Context (NETWORK)
+- **Internal/External Flag**: Classification of traffic as internal or external
+- **Port Category**: Categorization of ports (well-known, registered, dynamic)
+
+### Higher-order Statistics (HIGHER_ORDER)
+- **Packet Length Skewness**: Asymmetry of packet length distribution
+- **Packet Length Kurtosis**: Tail heaviness of packet length distribution
+- **IAT Skewness**: Asymmetry of inter-arrival time distribution
+- **IAT Kurtosis**: Tail heaviness of inter-arrival time distribution
+
 ### Examples
 
+#### Basic Usage
 ```bash
-# Basic analysis
+# Basic analysis with all features (including new 120+ features)
 ./flow_analyzer capture.pcap
 
 # High-performance analysis with custom output
@@ -175,9 +265,42 @@ Optional arguments:
 
 # Limit processing to first 1000 flows
 ./flow_analyzer traffic.pcap --max-flows 1000
+```
 
+#### Feature Selection Examples
+```bash
+# Extract only basic flow information
+./flow_analyzer traffic.pcap --feature-groups basic
+
+# Extract new entropy and behavioral features
+./flow_analyzer traffic.pcap --feature-groups entropy,behavioral
+
+# Extract all new enhanced features
+./flow_analyzer traffic.pcap --feature-groups ratios,entropy,protocol,behavioral,network,higher_order
+
+# Extract basic and timing features
+./flow_analyzer traffic.pcap --feature-groups basic,timing
+
+# Extract specific individual features
+./flow_analyzer traffic.pcap --features "Flow ID,Src IP,Dst IP,Protocol,Flow Duration"
+
+# Extract timing features but exclude flow duration
+./flow_analyzer traffic.pcap --feature-groups timing --exclude-features "Flow Duration"
+
+# Combine feature groups and individual features
+./flow_analyzer traffic.pcap --feature-groups basic,flags --features "Flow Bytes/s,Flow Packets/s"
+
+# Use high-performance config with custom feature selection
+./flow_analyzer traffic.pcap --config high_performance --feature-groups basic,timing,flags
+```
+
+#### Configuration Examples
+```bash
 # Show current configuration
 ./flow_analyzer --show-config --config detailed_analysis
+
+# Show configuration with feature selection
+./flow_analyzer dummy.pcap --show-config --feature-groups basic,timing
 ```
 
 ## Configuration
@@ -198,6 +321,9 @@ Optional arguments:
 | detailed_timing | true | false | true | false | Enable detailed timing analysis |
 | enhanced_flags | true | false | true | true | Enable enhanced TCP flag analysis |
 | precision | 6 | 3 | 8 | 4 | Decimal precision for output |
+| **Feature Selection** | | | | | |
+| use_selective_output | false | true | false | true | Enable selective feature output |
+| enabled_feature_groups | - | BASIC,TIMING | - | BASIC,TIMING,FLAGS | Active feature groups when selective output is enabled |
 
 ## Output Format
 
@@ -313,9 +439,34 @@ Contributions are welcome! Areas for improvement:
 - Performance optimizations
 - Windows build support
 
+## Changelog
+
+### Version 0.2.0 (Latest)
+- **Enhanced Feature Set**: Expanded from 89 to 120+ flow features
+- **New Feature Groups**: Added 6 new feature categories (RATIOS, ENTROPY, PROTOCOL, BEHAVIORAL, NETWORK, HIGHER_ORDER)
+- **Advanced Analytics**: Implemented entropy analysis, behavioral pattern detection, and higher-order statistics
+- **Protocol Intelligence**: Added automatic application protocol detection and TLS feature extraction
+- **Network Context**: Enhanced with internal/external traffic classification and port categorization
+- **Statistical Improvements**: Added skewness and kurtosis calculations for packet distributions
+- **Cross-platform Support**: Improved Windows WSL compilation support
+
+### Version 0.1.2
+- Initial release with 89 core flow features
+- Basic feature group selection
+- PCAP file processing capabilities
+- CSV output format
+
 ## License
 
-This project uses PcapPlusPlus and other open-source libraries. Please ensure compliance with their respective licenses when using this software.
+This project is licensed under the MIT License - see the LICENSE file for details.
+
+## Contributing
+
+Contributions are welcome! Please feel free to submit a Pull Request.
+
+## Support
+
+For questions, issues, or feature requests, please open an issue on the project repository.
 
 ## Acknowledgments
 

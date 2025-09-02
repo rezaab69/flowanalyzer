@@ -3,6 +3,8 @@
 #include <string>
 #include <filesystem>
 #include <cstring>
+#include <sstream>
+#include <vector>
 
 void printUsage(const char* programName) {
     std::cout << "Usage: " << programName << " <pcap_file> [options]\n\n";
@@ -19,11 +21,20 @@ void printUsage(const char* programName) {
     std::cout << "  -v, --verbose         Enable verbose output\n";
     std::cout << "  --show-config         Show configuration and exit\n";
     std::cout << "  --max-flows NUM       Maximum number of flows to process\n";
+    std::cout << "  --features LIST       Comma-separated list of specific features to include\n";
+    std::cout << "  --feature-groups LIST Comma-separated list of feature groups to include\n";
+    std::cout << "                        Available groups: basic, timing, flags, bulk, window,\n";
+    std::cout << "                        retransmission, icmp, statistics, ratios, entropy,\n";
+    std::cout << "                        protocol, behavioral, network, higher_order\n";
+    std::cout << "  --exclude-features LIST Comma-separated list of features to exclude\n";
     std::cout << "  -h, --help            Show this help message and exit\n\n";
     std::cout << "Examples:\n";
     std::cout << "  " << programName << " traffic.pcap\n";
     std::cout << "  " << programName << " traffic.pcap -o results.csv --config detailed_analysis\n";
-    std::cout << "  " << programName << " traffic.pcap --config high_performance --verbose\n\n";
+    std::cout << "  " << programName << " traffic.pcap --config high_performance --verbose\n";
+    std::cout << "  " << programName << " traffic.pcap --feature-groups basic,timing\n";
+    std::cout << "  " << programName << " traffic.pcap --features \"Flow ID,Src IP,Protocol\"\n";
+    std::cout << "  " << programName << " traffic.pcap --feature-groups basic --exclude-features \"Flow Duration\"\n\n";
     std::cout << "Configuration modes:\n";
     std::cout << "  default          - Standard feature extraction (recommended)\n";
     std::cout << "  high_performance - Faster processing, reduced features\n";
@@ -39,6 +50,10 @@ struct Arguments {
     bool showConfig = false;
     int maxFlows = -1;
     bool help = false;
+    std::string features = "";
+    std::string featureGroups = "";
+    std::string excludeFeatures = "";
+    bool useSelectiveOutput = false;
 };
 
 Arguments parseArguments(int argc, char* argv[]) {
@@ -95,6 +110,33 @@ Arguments parseArguments(int argc, char* argv[]) {
                 args.help = true;
                 return args;
             }
+        } else if (arg == "--features") {
+            if (i + 1 < argc) {
+                args.features = argv[++i];
+                args.useSelectiveOutput = true;
+            } else {
+                std::cerr << "Error: " << arg << " requires a value\n";
+                args.help = true;
+                return args;
+            }
+        } else if (arg == "--feature-groups") {
+            if (i + 1 < argc) {
+                args.featureGroups = argv[++i];
+                args.useSelectiveOutput = true;
+            } else {
+                std::cerr << "Error: " << arg << " requires a value\n";
+                args.help = true;
+                return args;
+            }
+        } else if (arg == "--exclude-features") {
+            if (i + 1 < argc) {
+                args.excludeFeatures = argv[++i];
+                args.useSelectiveOutput = true;
+            } else {
+                std::cerr << "Error: " << arg << " requires a value\n";
+                args.help = true;
+                return args;
+            }
         } else if (arg[0] == '-') {
             std::cerr << "Error: Unknown option '" << arg << "'\n";
             args.help = true;
@@ -118,6 +160,23 @@ Arguments parseArguments(int argc, char* argv[]) {
     return args;
 }
 
+std::vector<std::string> parseCommaSeparatedList(const std::string& input) {
+    std::vector<std::string> result;
+    std::stringstream ss(input);
+    std::string item;
+    
+    while (std::getline(ss, item, ',')) {
+        // Trim whitespace
+        item.erase(0, item.find_first_not_of(" \t"));
+        item.erase(item.find_last_not_of(" \t") + 1);
+        if (!item.empty()) {
+            result.push_back(item);
+        }
+    }
+    
+    return result;
+}
+
 int main(int argc, char* argv[]) {
     // Parse command line arguments
     Arguments args = parseArguments(argc, argv);
@@ -133,6 +192,29 @@ int main(int argc, char* argv[]) {
     // Override max flows if specified
     if (args.maxFlows > 0) {
         config.maxFlowPackets = args.maxFlows;
+    }
+    
+    // Configure feature selection if specified
+    if (args.useSelectiveOutput) {
+        config.useSelectiveOutput = true;
+        
+        // Parse feature groups
+        if (!args.featureGroups.empty()) {
+            std::vector<std::string> groups = parseCommaSeparatedList(args.featureGroups);
+            config.enabledFeatureGroups.insert(groups.begin(), groups.end());
+        }
+        
+        // Parse specific features
+        if (!args.features.empty()) {
+            std::vector<std::string> features = parseCommaSeparatedList(args.features);
+            config.enabledFeatures.insert(features.begin(), features.end());
+        }
+        
+        // Parse excluded features
+        if (!args.excludeFeatures.empty()) {
+            std::vector<std::string> excludedFeatures = parseCommaSeparatedList(args.excludeFeatures);
+            config.disabledFeatures.insert(excludedFeatures.begin(), excludedFeatures.end());
+        }
     }
     
     // Show configuration if requested
