@@ -71,9 +71,13 @@ sudo zypper install cmake git pkg-config libpcap-devel libopenssl-devel zlib-dev
 ### Automated Build (Linux)
 ```bash
 # Clone or navigate to the project directory
-cd flow_meter_cpp-build-md
+git clone https://github.com/rezaab69/flowanalyzer
+cd flowanalyzer
 
-# Run the automated build script
+# Make the build script executable
+chmod +x build_linux.sh
+
+# Run the build script (will install dependencies and compile)
 ./build_linux.sh
 ```
 
