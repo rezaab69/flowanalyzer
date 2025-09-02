@@ -6,7 +6,7 @@
 
 void printUsage(const char* programName) {
     std::cout << "Usage: " << programName << " <pcap_file> [options]\n\n";
-    std::cout << "Extract flow features from PCAP files using libtins\n\n";
+    std::cout << "Extract flow features from PCAP files using PcapPlusPlus\n\n";
     std::cout << "Positional arguments:\n";
     std::cout << "  pcap_file             Input PCAP file path\n\n";
     std::cout << "Optional arguments:\n";

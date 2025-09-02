@@ -36,36 +36,49 @@ install_prereqs() {
   fi
 }
 
-# -------------------- libtins install --------------------
-have_libtins() {
+# -------------------- pcapplusplus install --------------------
+have_pcapplusplus() {
   # Check for libraries in common locations
-  if ldconfig -p 2>/dev/null | grep -q "libtins"; then return 0; fi
-  if [ -f /usr/local/lib/libtins.so ] || [ -f /usr/local/lib64/libtins.so ] || \
-     [ -f /usr/lib/libtins.so ]       || [ -f /usr/lib64/libtins.so ] || \
-     [ -f /usr/local/lib/libtins.a ]  || [ -f /usr/lib/libtins.a ]; then
+  if ldconfig -p 2>/dev/null | grep -q "libPcap++"; then return 0; fi
+  if [ -f /usr/local/lib/libPcap++.so ] || [ -f /usr/local/lib64/libPcap++.so ] || \
+     [ -f /usr/lib/libPcap++.so ]       || [ -f /usr/lib64/libPcap++.so ] || \
+     [ -f /usr/local/lib/libPcap++.a ]  || [ -f /usr/lib/libPcap++.a ]; then
     return 0
   fi
   return 1
 }
 
-install_libtins() {
-  if have_libtins; then
-    log "libtins appears to be installed. Skipping source build."
+install_pcapplusplus() {
+  if have_pcapplusplus; then
+    log "PcapPlusPlus appears to be installed. Skipping source build."
     return 0
   fi
 
-  log "libtins not found. Building and installing from source (requires sudo)..."
+  log "PcapPlusPlus not found. Building and installing from source (requires sudo)..."
   tmpdir="$(mktemp -d)"
   trap 'rm -rf "$tmpdir"' EXIT
   pushd "$tmpdir" >/dev/null
 
-  git clone --depth 1 https://github.com/mfontanini/libtins.git
-  cd libtins
+  git clone --depth 1 https://github.com/seladb/PcapPlusPlus.git
+  cd PcapPlusPlus
 
-  log "Using CMake build"
-  cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DLIBTINS_BUILD_EXAMPLES=OFF -DLIBTINS_BUILD_TESTS=OFF
-  cmake --build build -j"$(nproc)"
-  sudo cmake --install build
+  if [ -f ./configure-linux.sh ]; then
+    log "Using legacy configure-linux.sh"
+    ./configure-linux.sh --default
+    make -j"$(nproc)"
+    sudo make install
+  else
+    log "Using CMake build"
+    cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DPCAPPP_BUILD_EXAMPLES=OFF -DPCAPPP_BUILD_TESTS=OFF
+    cmake --build build -j"$(nproc)"
+    sudo cmake --install build
+  fi
+
+  # Ensure include dir name matches project includes (PcapPlusPlus)
+  if [ -d /usr/local/include/pcapplusplus ] && [ ! -d /usr/local/include/PcapPlusPlus ]; then
+    log "Creating compatibility symlink: /usr/local/include/PcapPlusPlus -> /usr/local/include/pcapplusplus"
+    sudo ln -s /usr/local/include/pcapplusplus /usr/local/include/PcapPlusPlus || true
+  fi
 
   popd >/dev/null
 }
@@ -81,7 +94,7 @@ build_project() {
 
   CXXFLAGS="-std=c++17 -O2 -Wall -Wextra"
   INCLUDES="-I/usr/local/include -I/usr/include"
-  LIBS="-ltins -lpcap -lpthread"
+  LIBS="-lPcap++ -lPacket++ -lCommon++ -lpcap -lpthread"
 
   log "Compiling flow_analyzer..."
   g++ $CXXFLAGS $INCLUDES main.cpp flow_analyzer.cpp config.cpp -o flow_analyzer $LFLAGS $LIBS
@@ -95,8 +108,8 @@ cd "$SCRIPT_DIR"
 log "Installing prerequisites..."
 install_prereqs
 
-log "Ensuring libtins is installed..."
-install_libtins
+log "Ensuring PcapPlusPlus is installed..."
+install_pcapplusplus
 
 log "Building the program..."
 build_project

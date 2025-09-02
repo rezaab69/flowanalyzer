@@ -1,102 +1,94 @@
-# Flow Meter C++ - Network Traffic Flow Analysis Tool
+# Flow Meter C++ - Network Flow Feature Extractor
 
-A high-performance C++ network traffic flow analyzer that extracts comprehensive flow features from PCAP files using the libtins library. This tool is designed for network security analysis, traffic monitoring, and machine learning applications.
+A high-performance C++ application for extracting network flow features from PCAP files using PcapPlusPlus. This tool analyzes network traffic and generates comprehensive flow-level statistics suitable for network analysis, intrusion detection, and machine learning applications.
 
 ## Features
 
 ### Core Capabilities
-- **PCAP File Analysis**: Process network packet capture files to extract flow-level features
-- **89+ Flow Features**: Comprehensive feature extraction including timing, packet sizes, flags, and behavioral metrics
+- **PCAP File Analysis**: Process network capture files to extract flow-level features
+- **89+ Flow Features**: Comprehensive feature extraction including packet statistics, timing analysis, and protocol-specific metrics
 - **Multiple Configuration Modes**: Optimized presets for different use cases
-- **CSV Export**: Export extracted features in CSV format for further analysis
-- **Cross-Platform**: Supports Linux environments with WSL compatibility
+- **CSV Export**: Export extracted features to CSV format for further analysis
+- **Cross-Platform**: Supports Linux with automated build scripts
 
 ### Extracted Features
 
 #### Basic Flow Information
-- Flow ID, source/destination IP addresses and ports
-- Protocol type, timestamp, flow duration
-- Packet counts (forward/backward directions)
+- Flow ID, source/destination IP and ports, protocol
+- Flow duration and packet counts (forward/backward)
+- Timestamp information
 
 #### Packet Statistics
-- Packet length statistics (min, max, mean, standard deviation)
-- Flow rates (bytes/sec, packets/sec)
-- Header length analysis
+- Packet length statistics (min, max, mean, std deviation)
+- Header and payload length analysis
+- Packet size variance and ratios
 
 #### Timing Analysis
-- Inter-arrival time (IAT) statistics
-- Active/idle time detection
-- Flow duration metrics
+- Inter-arrival time (IAT) statistics for forward and backward directions
+- Flow rates (bytes/sec, packets/sec)
+- Active and idle time detection
 
-#### TCP Features
-- TCP flag counts (FIN, SYN, RST, PSH, ACK, URG, CWR, ECE)
-- Window size analysis
+#### Protocol Features
+- TCP flag analysis (FIN, SYN, RST, PSH, ACK, URG, CWR, ECE)
+- Window size information
+- ICMP code and type analysis
 - Retransmission detection
-- Segment size statistics
 
 #### Advanced Features
 - Bulk transfer detection
 - Subflow analysis
-- ICMP code/type extraction
-- Directional packet analysis
+- Segment size statistics
+- Connection flow time analysis
+
+## Requirements
+
+### System Dependencies
+- **C++ Compiler**: GCC 7+ or Clang 6+ with C++17 support
+- **CMake**: Version 3.10 or higher
+- **PcapPlusPlus**: Network packet parsing library
+- **libpcap**: Packet capture library
+- **OpenSSL**: Cryptographic library
+- **zlib**: Compression library
+
+### Linux Package Requirements
+```bash
+# Ubuntu/Debian
+sudo apt-get install build-essential cmake git pkg-config libpcap-dev libssl-dev zlib1g-dev
+
+# Fedora/RHEL
+sudo dnf install @development-tools cmake git pkgconfig libpcap-devel openssl-devel zlib-devel
+
+# Arch Linux
+sudo pacman -S base-devel cmake git pkgconf libpcap openssl zlib
+
+# openSUSE
+sudo zypper install -t pattern devel_basis
+sudo zypper install cmake git pkg-config libpcap-devel libopenssl-devel zlib-devel
+```
 
 ## Installation
 
-### Prerequisites
-- Linux environment (Ubuntu/Debian recommended, WSL supported)
-- GCC/G++ compiler with C++17 support
-- CMake (version 3.10+)
-- Git
-- libpcap development headers
-- OpenSSL development headers
-- zlib development headers
-
-### Automated Installation (Recommended)
-
-The project includes an automated build script that handles dependency installation:
-
+### Automated Build (Linux)
 ```bash
-# Clone project
-git clone https://github.com/rezaab69/flowanalyzer
-cd flowanalyzer
+# Clone or navigate to the project directory
+cd flow_meter_cpp-build-md
 
-# Make the build script executable
-chmod +x build_linux.sh
-
-# Run the build script (will install dependencies and compile)
+# Run the automated build script
 ./build_linux.sh
 ```
 
-### Manual Installation
+The build script will:
+1. Install system dependencies based on your Linux distribution
+2. Download and build PcapPlusPlus if not already installed
+3. Compile the flow analyzer application
 
-1. **Install System Dependencies**:
-   ```bash
-   # Ubuntu/Debian
-   sudo apt-get update
-   sudo apt-get install build-essential cmake git pkg-config libpcap-dev libssl-dev zlib1g-dev
-   
-   # Fedora/RHEL
-   sudo dnf install @development-tools cmake git pkgconfig libpcap-devel openssl-devel zlib-devel
-   
-   # Arch Linux
-   sudo pacman -Syu base-devel cmake git pkgconf libpcap openssl zlib
-   ```
-
-2. **Install libtins Library**:
-   ```bash
-   git clone https://github.com/mfontanini/libtins.git
-   cd libtins
-   mkdir build && cd build
-   cmake .. -DLIBTINS_ENABLE_CXX11=1
-   make -j$(nproc)
-   sudo make install
-   sudo ldconfig
-   ```
-
-3. **Compile the Flow Analyzer**:
-   ```bash
-   g++ -std=c++17 -O3 -o flow_analyzer main.cpp flow_analyzer.cpp config.cpp -ltins -lpcap -lpthread
-   ```
+### Manual Build
+```bash
+# Ensure PcapPlusPlus is installed
+# Then compile the project
+g++ -std=c++17 -O3 -o flow_analyzer main.cpp flow_analyzer.cpp config.cpp \
+    -lPcap++ -lPacket++ -lCommon++ -lpcap -pthread
+```
 
 ## Usage
 
@@ -114,58 +106,41 @@ chmod +x build_linux.sh
 
 ### Configuration Modes
 
-The tool supports four predefined configuration modes:
-
-#### 1. Default Mode (Recommended)
+#### Default Mode (Recommended)
 ```bash
 ./flow_analyzer traffic.pcap --config default
 ```
 - Balanced feature extraction
 - Standard performance
 - All major features enabled
-- Suitable for most analysis tasks
 
-#### 2. High Performance Mode
+#### High Performance Mode
 ```bash
 ./flow_analyzer traffic.pcap --config high_performance
 ```
 - Optimized for speed
 - Reduced feature set
-- Disabled computationally expensive features
-- Ideal for large PCAP files
+- Lower memory usage
+- Suitable for large PCAP files
 
-#### 3. Detailed Analysis Mode
+#### Detailed Analysis Mode
 ```bash
 ./flow_analyzer traffic.pcap --config detailed_analysis
 ```
 - Maximum feature extraction
-- Enhanced precision
-- All features enabled
+- Enhanced timing analysis
+- Higher precision calculations
 - Best for research and detailed analysis
 
-#### 4. Real-time Mode
+#### Real-time Mode
 ```bash
 ./flow_analyzer traffic.pcap --config real_time
 ```
 - Optimized for real-time processing
 - Shorter flow timeouts
-- Balanced feature set
-- Suitable for live traffic analysis
+- Balanced performance and features
 
-### Advanced Options
-
-```bash
-# Limit the number of flows processed
-./flow_analyzer traffic.pcap --max-flows 1000
-
-# Show current configuration
-./flow_analyzer --show-config
-
-# Combine multiple options
-./flow_analyzer traffic.pcap -o detailed_results.csv --config detailed_analysis --verbose
-```
-
-### Command Line Reference
+### Command Line Options
 
 ```
 Usage: flow_analyzer <pcap_file> [options]
@@ -182,141 +157,165 @@ Optional arguments:
   -h, --help            Show help message and exit
 ```
 
-## Output Format
+### Examples
 
-The tool exports flow features to a CSV file with the following structure:
+```bash
+# Basic analysis
+./flow_analyzer capture.pcap
 
-### CSV Columns (89+ features)
-- **Flow Identification**: Flow ID, source/destination IPs and ports, protocol, timestamp
-- **Basic Metrics**: Flow duration, packet counts, total bytes
-- **Packet Length Statistics**: Min, max, mean, std deviation for forward/backward directions
-- **Flow Rates**: Bytes per second, packets per second
-- **Inter-arrival Times**: IAT statistics for flow and directional analysis
-- **TCP Flags**: Counts for all TCP flag types
-- **Header Analysis**: Header length statistics
-- **Advanced Features**: Bulk transfer metrics, active/idle times, retransmission counts
+# High-performance analysis with custom output
+./flow_analyzer large_capture.pcap -o analysis_results.csv --config high_performance
 
-### Sample Output
-```csv
-Flow_ID,Src_IP,Src_Port,Dst_IP,Dst_Port,Protocol,Timestamp,Flow_Duration,Total_Fwd_Packets,Total_Bwd_Packets,...
-f1a2b3c4d5e6f7g8,192.168.1.100,12345,10.0.0.1,80,6,2024-01-01 10:00:00,5.234,15,12,...
+# Detailed analysis with verbose output
+./flow_analyzer network_traffic.pcap --config detailed_analysis --verbose
+
+# Limit processing to first 1000 flows
+./flow_analyzer traffic.pcap --max-flows 1000
+
+# Show current configuration
+./flow_analyzer --show-config --config detailed_analysis
 ```
 
-## Configuration Details
+## Configuration
 
 ### Configuration Parameters
 
 | Parameter | Default | High Perf | Detailed | Real-time | Description |
 |-----------|---------|-----------|----------|-----------|-------------|
-| Bulk Threshold | 4 | 8 | 3 | 6 | Minimum packets for bulk detection |
-| Active Threshold | 1.0s | 2.0s | 0.5s | 1.5s | Threshold for active time detection |
-| Max Flow Packets | 10,000 | 5,000 | 50,000 | 1,000 | Maximum packets per flow |
-| Flow Timeout | 3600s | 1800s | 7200s | 300s | Flow inactivity timeout |
-| Calculate Variance | Yes | No | Yes | Yes | Enable variance calculations |
-| Detailed Timing | Yes | No | Yes | No | Enhanced timing analysis |
-| Retrans Detection | Yes | No | Yes | Yes | TCP retransmission detection |
+| bulk_threshold | 4 | 8 | 3 | 6 | Minimum packets for bulk detection |
+| enable_bulk_detection | true | false | true | true | Enable bulk transfer analysis |
+| active_threshold | 1.0 | 2.0 | 0.5 | 1.5 | Threshold for active time detection (seconds) |
+| enable_active_idle | true | false | true | true | Enable active/idle time analysis |
+| enable_retrans_detection | true | false | true | true | Enable retransmission detection |
+| retrans_window | 0.1 | 0.1 | 0.05 | 0.1 | Retransmission detection window (seconds) |
+| max_flow_packets | 10000 | 5000 | 50000 | 1000 | Maximum packets per flow |
+| flow_timeout | 3600 | 1800 | 7200 | 300 | Flow timeout (seconds) |
+| calculate_variance | true | false | true | true | Calculate packet length variance |
+| detailed_timing | true | false | true | false | Enable detailed timing analysis |
+| enhanced_flags | true | false | true | true | Enable enhanced TCP flag analysis |
+| precision | 6 | 3 | 8 | 4 | Decimal precision for output |
 
-## Technical Architecture
+## Output Format
+
+The tool generates CSV files with the following feature categories:
+
+### Flow Identification
+- `flow_id`: Unique flow identifier
+- `src_ip`, `src_port`: Source address and port
+- `dst_ip`, `dst_port`: Destination address and port
+- `protocol`: IP protocol number
+- `timestamp`: Flow start time
+
+### Basic Statistics
+- `flow_duration`: Total flow duration
+- `total_fwd_packets`, `total_bwd_packets`: Packet counts
+- `total_length_fwd_packets`, `total_length_bwd_packets`: Total bytes
+
+### Packet Length Features
+- `fwd_packet_length_max/min/mean/std`: Forward direction statistics
+- `bwd_packet_length_max/min/mean/std`: Backward direction statistics
+- `packet_length_min/max/mean/std/variance`: Overall statistics
+
+### Timing Features
+- `flow_bytes_per_sec`, `flow_packets_per_sec`: Flow rates
+- `flow_iat_mean/std/max/min`: Inter-arrival time statistics
+- `fwd_iat_*`, `bwd_iat_*`: Directional IAT statistics
+
+### Protocol Features
+- `fin_flag_count`, `syn_flag_count`, etc.: TCP flag counts
+- `fwd_psh_flags`, `bwd_psh_flags`, etc.: Directional flag counts
+- `icmp_code`, `icmp_type`: ICMP information
+
+### Advanced Features
+- `fwd_bytes_bulk_avg`, `bwd_bytes_bulk_avg`: Bulk transfer statistics
+- `active_mean/std/max/min`: Active time statistics
+- `idle_mean/std/max/min`: Idle time statistics
+- `fwd_tcp_retrans_count`, `bwd_tcp_retrans_count`: Retransmission counts
+
+## Architecture
 
 ### Core Components
 
-1. **FlowFeatureExtractor**: Main analysis engine
-   - Packet processing and flow reconstruction
-   - Feature extraction algorithms
-   - Statistical calculations
+#### FlowFeatureExtractor Class
+- Main analysis engine
+- Handles PCAP file processing
+- Manages flow state and feature extraction
 
-2. **Configuration System**: Flexible configuration management
-   - Predefined configuration modes
-   - Parameter validation
-   - Runtime configuration display
+#### Configuration System
+- Flexible configuration management
+- Multiple predefined modes
+- Runtime parameter validation
 
-3. **Flow Management**: Efficient flow tracking
-   - Bidirectional flow identification
-   - Packet classification
-   - Flow timeout handling
+#### Flow Management
+- Bidirectional flow tracking
+- Automatic flow timeout handling
+- Memory-efficient packet processing
 
-### Dependencies
+### Key Files
 
-- **libtins**: High-level packet crafting and sniffing library
-- **libpcap**: Low-level packet capture library
-- **Standard C++ Libraries**: STL containers, algorithms, I/O
+- `main.cpp`: Command-line interface and application entry point
+- `flow_analyzer.h`: Core class definitions and data structures
+- `flow_analyzer.cpp`: Feature extraction implementation
+- `config.cpp`: Configuration management and validation
+- `build_linux.sh`: Automated build script for Linux
 
-### Performance Considerations
+## Performance Considerations
 
-- **Memory Management**: Efficient flow storage with configurable limits
-- **Processing Speed**: Optimized algorithms for large PCAP files
-- **Scalability**: Configurable parameters for different use cases
+### Memory Usage
+- Flows are processed incrementally to minimize memory footprint
+- Configurable limits on packets per flow
+- Automatic cleanup of expired flows
 
-## Use Cases
+### Processing Speed
+- Optimized packet parsing using PcapPlusPlus
+- Efficient statistical calculations
+- Configurable feature sets for performance tuning
 
-### Network Security
-- Intrusion detection system feature extraction
-- Malware traffic analysis
-- Anomaly detection in network flows
-
-### Traffic Analysis
-- Network performance monitoring
-- Bandwidth utilization analysis
-- Application identification
-
-### Machine Learning
-- Feature engineering for ML models
-- Dataset preparation for network classification
-- Behavioral analysis of network traffic
-
-### Research Applications
-- Network protocol analysis
-- Traffic characterization studies
-- Performance evaluation
+### Scalability
+- Suitable for large PCAP files (multi-GB)
+- Linear processing time complexity
+- Configurable resource limits
 
 ## Troubleshooting
 
 ### Common Issues
 
-1. **libtins not found**:
-   ```bash
-   sudo ldconfig
-   export LD_LIBRARY_PATH=/usr/local/lib:$LD_LIBRARY_PATH
-   ```
+#### Build Errors
+- Ensure all dependencies are installed
+- Check C++17 compiler support
+- Verify PcapPlusPlus installation
 
-2. **Permission denied for PCAP file**:
-   ```bash
-   chmod +r your_file.pcap
-   ```
+#### Runtime Errors
+- Verify PCAP file exists and is readable
+- Check available disk space for output files
+- Ensure sufficient memory for large captures
 
-3. **Large memory usage**:
-   - Use `high_performance` configuration mode
-   - Reduce `--max-flows` parameter
-   - Process smaller PCAP files
+#### Performance Issues
+- Use `high_performance` configuration for large files
+- Reduce `max_flow_packets` for memory constraints
+- Consider processing files in smaller chunks
 
-4. **Compilation errors**:
-   - Ensure C++17 support: `g++ --version`
-   - Check all dependencies are installed
-   - Verify libtins installation
-
-### WSL-Specific Notes
-
-- Ensure WSL2 is being used for better performance
-- Install dependencies within the WSL environment
-- PCAP files should be accessible from within WSL
+### Debug Options
+- Use `--verbose` flag for detailed processing information
+- Use `--show-config` to verify configuration settings
+- Check system resources during processing
 
 ## Contributing
 
 Contributions are welcome! Areas for improvement:
-- Additional feature extraction algorithms
+- Additional protocol support (IPv6, SCTP, etc.)
+- Real-time packet capture integration
+- Additional statistical features
 - Performance optimizations
-- Support for additional output formats
-- Real-time processing capabilities
+- Windows build support
 
 ## License
 
-This project is provided as-is for educational and research purposes.
+This project uses PcapPlusPlus and other open-source libraries. Please ensure compliance with their respective licenses when using this software.
 
-## Version Information
+## Acknowledgments
 
-- **Version**: 0.1.0
-- **Build Target**: Linux/WSL
-- **C++ Standard**: C++17
-
-- **Primary Dependency**: libtins
+- **PcapPlusPlus**: High-performance packet parsing library
+- **libpcap**: Packet capture functionality
+- Network security research community for feature definitions and best practices
 

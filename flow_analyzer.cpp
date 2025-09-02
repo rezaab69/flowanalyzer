@@ -8,8 +8,6 @@
 #include <chrono>
 #include <numeric>
 
-using namespace Tins;
-
 FlowFeatureExtractor::FlowFeatureExtractor(const Config& config) : config_(config) {
     // Initialize with provided configuration
 }
@@ -41,68 +39,70 @@ bool FlowFeatureExtractor::isForwardDirection(const std::string& srcIp, const st
     return srcIp == flowSrcIp && srcPort == flowSrcPort;
 }
 
-PacketInfo FlowFeatureExtractor::extractPacketInfo(const PDU& pdu) {
+PacketInfo FlowFeatureExtractor::extractPacketInfo(pcpp::Packet& packet) {
     PacketInfo info;
-    info.timestamp = 0.0; // PDU doesn't have timestamp, will need to be set externally
-    info.length = pdu.size();
+    info.timestamp = std::chrono::duration_cast<std::chrono::microseconds>(
+        std::chrono::system_clock::now().time_since_epoch()).count() / 1000000.0;
+    info.length = packet.getRawPacket()->getRawDataLen();
     info.headerLength = 0;
     info.payloadLength = 0;
     
     // Extract IP layer information
-    const IP* ip = pdu.find_pdu<IP>();
-    if (ip) {
-        info.srcIp = ip->src_addr().to_string();
-        info.dstIp = ip->dst_addr().to_string();
-        info.protocol = ip->protocol();
-        info.headerLength += ip->header_size();
+    pcpp::IPv4Layer* ipv4Layer = packet.getLayerOfType<pcpp::IPv4Layer>();
+    if (ipv4Layer) {
+        info.srcIp = ipv4Layer->getSrcIPAddress().toString();
+        info.dstIp = ipv4Layer->getDstIPAddress().toString();
+        info.protocol = ipv4Layer->getIPv4Header()->protocol;
+        info.headerLength += ipv4Layer->getHeaderLen();
     }
     
     // Extract TCP layer information
-    const TCP* tcp = pdu.find_pdu<TCP>();
-    if (tcp) {
-        info.srcPort = tcp->sport();
-        info.dstPort = tcp->dport();
+    pcpp::TcpLayer* tcpLayer = packet.getLayerOfType<pcpp::TcpLayer>();
+    if (tcpLayer) {
+        info.srcPort = tcpLayer->getSrcPort();
+        info.dstPort = tcpLayer->getDstPort();
         info.protocol = 6; // TCP
-        info.headerLength += tcp->header_size();
-        info.windowSize = tcp->window();
+        info.headerLength += tcpLayer->getHeaderLen();
+        info.windowSize = tcpLayer->getTcpHeader()->windowSize;
         
         // Extract TCP flags
-        info.flags["FIN"] = tcp->flags() & TCP::FIN;
-        info.flags["SYN"] = tcp->flags() & TCP::SYN;
-        info.flags["RST"] = tcp->flags() & TCP::RST;
-        info.flags["PSH"] = tcp->flags() & TCP::PSH;
-        info.flags["ACK"] = tcp->flags() & TCP::ACK;
-        info.flags["URG"] = tcp->flags() & TCP::URG;
-        info.flags["CWR"] = tcp->flags() & TCP::CWR;
-        info.flags["ECE"] = tcp->flags() & TCP::ECE;
+        pcpp::tcphdr* tcpHeader = tcpLayer->getTcpHeader();
+        info.flags["FIN"] = tcpHeader->finFlag;
+        info.flags["SYN"] = tcpHeader->synFlag;
+        info.flags["RST"] = tcpHeader->rstFlag;
+        info.flags["PSH"] = tcpHeader->pshFlag;
+        info.flags["ACK"] = tcpHeader->ackFlag;
+        info.flags["URG"] = tcpHeader->urgFlag;
+        info.flags["CWR"] = tcpHeader->cwrFlag;
+        info.flags["ECE"] = tcpHeader->eceFlag;
     }
     
     // Extract UDP layer information
-    const UDP* udp = pdu.find_pdu<UDP>();
-    if (udp) {
-        info.srcPort = udp->sport();
-        info.dstPort = udp->dport();
+    pcpp::UdpLayer* udpLayer = packet.getLayerOfType<pcpp::UdpLayer>();
+    if (udpLayer) {
+        info.srcPort = udpLayer->getSrcPort();
+        info.dstPort = udpLayer->getDstPort();
         info.protocol = 17; // UDP
         info.headerLength += 8; // UDP header length
     }
     
     // Extract ICMP layer information
-    const ICMP* icmp = pdu.find_pdu<ICMP>();
-    if (icmp) {
+    pcpp::IcmpLayer* icmpLayer = packet.getLayerOfType<pcpp::IcmpLayer>();
+    if (icmpLayer) {
         info.protocol = 1; // ICMP
         info.srcPort = 0;
         info.dstPort = 0;
-        info.icmpCode = icmp->code();
-        info.icmpType = icmp->type();
+        info.icmpCode = icmpLayer->getIcmpHeader()->code;
+        info.icmpType = icmpLayer->getIcmpHeader()->type;
     }
     
     info.payloadLength = info.length - info.headerLength;
     return info;
 }
 
-void FlowFeatureExtractor::processPacket(const PDU& pdu) {
+void FlowFeatureExtractor::processPacket(pcpp::Packet& packet) {
     try {
-        PacketInfo pktInfo = extractPacketInfo(pdu);
+        PacketInfo pktInfo = extractPacketInfo(packet);
         
         if (pktInfo.srcIp.empty() || pktInfo.dstIp.empty()) {
             return;
@@ -493,74 +493,34 @@ std::vector<FlowFeatures> FlowFeatureExtractor::analyzePcap(const std::string& p
     std::vector<FlowFeatures> flowFeatures;
     
     try {
-        FileSniffer sniffer(pcapFile);
+        pcpp::IFileReaderDevice* reader = pcpp::IFileReaderDevice::getReader(pcapFile);
+        
+        if (reader == nullptr) {
+            std::cerr << "Cannot determine reader for file type" << std::endl;
+            return flowFeatures;
+        }
+        
+        if (!reader->open()) {
+            std::cerr << "Cannot open pcap file" << std::endl;
+            delete reader;
+            return flowFeatures;
+        }
+        
+        pcpp::RawPacket rawPacket;
         int packetCount = 0;
         
-        for (const auto& packet : sniffer) {
-            // Extract PDU and timestamp from packet
-            const PDU& pdu = *packet.pdu();
-            double timestamp = packet.timestamp().seconds() + packet.timestamp().microseconds() / 1000000.0;
-            
-            // Process packet with timestamp
-            PacketInfo pktInfo = extractPacketInfo(pdu);
-            pktInfo.timestamp = timestamp;
-            
-            if (!pktInfo.srcIp.empty() && !pktInfo.dstIp.empty()) {
-                // Process the packet info directly
-                std::string flowId = getFlowId(pktInfo.srcIp, pktInfo.dstIp,
-                                              pktInfo.srcPort, pktInfo.dstPort, pktInfo.protocol);
-                
-                Flow& flow = flows_[flowId];
-                
-                // Initialize flow if first packet
-                if (flow.packets.empty()) {
-                    flow.srcIp = pktInfo.srcIp;
-                    flow.dstIp = pktInfo.dstIp;
-                    flow.srcPort = pktInfo.srcPort;
-                    flow.dstPort = pktInfo.dstPort;
-                    flow.protocol = pktInfo.protocol;
-                    flow.startTime = pktInfo.timestamp;
-                    flow.icmpCode = pktInfo.icmpCode;
-                    flow.icmpType = pktInfo.icmpType;
-                    
-                    if (pktInfo.windowSize > 0) {
-                        flow.fwdInitWin = pktInfo.windowSize;
-                    }
-                }
-                
-                flow.endTime = pktInfo.timestamp;
-                flow.packets.push_back(pktInfo);
-                
-                // Determine packet direction
-                bool isForward = isForwardDirection(pktInfo.srcIp, pktInfo.dstIp,
-                                                  pktInfo.srcPort, pktInfo.dstPort,
-                                                  flow.srcIp, flow.srcPort);
-                
-                if (isForward) {
-                    flow.fwdPackets.push_back(pktInfo);
-                    // Update forward flags
-                    for (const auto& flag : pktInfo.flags) {
-                        if (flow.fwdFlags.find(flag.first) != flow.fwdFlags.end() && flag.second) {
-                            flow.fwdFlags[flag.first]++;
-                        }
-                    }
-                } else {
-                    flow.bwdPackets.push_back(pktInfo);
-                    // Update backward flags
-                    for (const auto& flag : pktInfo.flags) {
-                        if (flow.bwdFlags.find(flag.first) != flow.bwdFlags.end() && flag.second) {
-                            flow.bwdFlags[flag.first]++;
-                        }
-                    }
-                }
-            }
-            
+        while (reader->getNextPacket(rawPacket)) {
+            pcpp::Packet packet(&rawPacket);
+            processPacket(packet);
             packetCount++;
             
             if (packetCount % 1000 == 0) {
                 std::cout << "Processed " << packetCount << " packets..." << std::endl;
             }
         }
+        
+        reader->close();
+        delete reader;
         
         std::cout << "Total packets processed: " << packetCount << std::endl;
         std::cout << "Total flows identified: " << flows_.size() << std::endl;

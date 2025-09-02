@@ -7,10 +7,13 @@
 #include <unordered_map>
 #include <set>
 #include <cstdint>
-#include <tins/tins.h>
-#include <tins/pdu.h>
-
-using namespace Tins;
+#include <PcapPlusPlus/Packet.h>
+#include <PcapPlusPlus/IPv4Layer.h>
+#include <PcapPlusPlus/TcpLayer.h>
+#include <PcapPlusPlus/UdpLayer.h>
+#include <PcapPlusPlus/IcmpLayer.h>
+#include <PcapPlusPlus/PcapFileDevice.h>
+#include <PcapPlusPlus/PcapLiveDevice.h>
 
 // Configuration structure
 struct Config {
@@ -250,7 +253,7 @@ public:
     void exportToCSV(const std::vector<FlowFeatures>& features, const std::string& outputFile);
     
     // Packet processing
-    void processPacket(const PDU& pdu);
+    void processPacket(pcpp::Packet& packet);
     
     // Feature extraction
     FlowFeatures extractFlowFeatures(const std::string& flowId, const Flow& flow);
@@ -267,7 +270,7 @@ private:
                            uint16_t srcPort, uint16_t dstPort,
                            const std::string& flowSrcIp, uint16_t flowSrcPort);
     
-    PacketInfo extractPacketInfo(const PDU& pdu);
+    PacketInfo extractPacketInfo(pcpp::Packet& packet);
     
     // Statistical calculations
     Statistics calculateStatistics(const std::vector<double>& values);
