@@ -46,9 +46,9 @@ Config getHighPerformanceConfig() {
     config.precision = 3;
     
     // Feature selection defaults - basic features only for performance
-    config.useSelectiveOutput = true;
-    config.enabledFeatureGroups.insert("BASIC");
-    config.enabledFeatureGroups.insert("TIMING");
+    config.useSelectiveOutput = false;
+    config.enabledFeatureGroups.insert("basic");
+    config.enabledFeatureGroups.insert("timing");
     config.enabledFeatures.clear();
     config.disabledFeatures.clear();
     
@@ -100,9 +100,9 @@ Config getRealTimeConfig() {
     
     // Feature selection defaults - essential features for real-time
     config.useSelectiveOutput = true;
-    config.enabledFeatureGroups.insert("BASIC");
-    config.enabledFeatureGroups.insert("TIMING");
-    config.enabledFeatureGroups.insert("FLAGS");
+    config.enabledFeatureGroups.insert("basic");
+    config.enabledFeatureGroups.insert("timing");
+    config.enabledFeatureGroups.insert("flags");
     config.enabledFeatures.clear();
     config.disabledFeatures.clear();
     
@@ -149,27 +149,66 @@ bool validateConfig(const Config& config) {
     
     // Validate feature selection if enabled
     if (config.useSelectiveOutput) {
+        std::vector<std::string> invalidGroups;
+        std::vector<std::string> invalidFeatures;
+        std::vector<std::string> invalidDisabledFeatures;
+        
         // Validate feature groups
         for (const auto& group : config.enabledFeatureGroups) {
             if (!FeatureGroups::isValidGroupName(group)) {
-                std::cerr << "Invalid feature group: " << group << std::endl;
-                return false;
+                invalidGroups.push_back(group);
             }
         }
         
         // Validate individual features
         for (const auto& feature : config.enabledFeatures) {
             if (!FeatureGroups::isValidFeatureName(feature)) {
-                std::cerr << "Invalid feature name: " << feature << std::endl;
-                return false;
+                invalidFeatures.push_back(feature);
             }
         }
         
         for (const auto& feature : config.disabledFeatures) {
             if (!FeatureGroups::isValidFeatureName(feature)) {
-                std::cerr << "Invalid disabled feature name: " << feature << std::endl;
-                return false;
+                invalidDisabledFeatures.push_back(feature);
             }
+        }
+        
+        // Report all validation errors
+        bool hasErrors = false;
+        
+        if (!invalidGroups.empty()) {
+            std::cerr << "Invalid feature groups: ";
+            for (size_t i = 0; i < invalidGroups.size(); ++i) {
+                if (i > 0) std::cerr << ", ";
+                std::cerr << "'" << invalidGroups[i] << "'";
+            }
+            std::cerr << std::endl;
+            std::cerr << "Valid groups: basic, timing, flags, bulk, window, retransmission, icmp, statistics, ratios, entropy, protocol, behavioral, network, higher_order, all" << std::endl;
+            hasErrors = true;
+        }
+        
+        if (!invalidFeatures.empty()) {
+            std::cerr << "Invalid feature names: ";
+            for (size_t i = 0; i < invalidFeatures.size(); ++i) {
+                if (i > 0) std::cerr << ", ";
+                std::cerr << "'" << invalidFeatures[i] << "'";
+            }
+            std::cerr << std::endl;
+            hasErrors = true;
+        }
+        
+        if (!invalidDisabledFeatures.empty()) {
+            std::cerr << "Invalid disabled feature names: ";
+            for (size_t i = 0; i < invalidDisabledFeatures.size(); ++i) {
+                if (i > 0) std::cerr << ", ";
+                std::cerr << "'" << invalidDisabledFeatures[i] << "'";
+            }
+            std::cerr << std::endl;
+            hasErrors = true;
+        }
+        
+        if (hasErrors) {
+            return false;
         }
     }
     

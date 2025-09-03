@@ -68,7 +68,7 @@ const std::set<std::string> FeatureGroups::ENTROPY = {
 };
 
 const std::set<std::string> FeatureGroups::PROTOCOL = {
-    "Application Protocol", "TLS Cert Count", "TLS Session ID Length"
+    "Application Protocol", "TLS Cert Count", "TLS Session ID Length", "TLS Cipher Suite"
 };
 
 const std::set<std::string> FeatureGroups::BEHAVIORAL = {
@@ -1144,6 +1144,12 @@ std::set<std::string> FeatureGroups::getFeaturesByGroup(const std::string& group
     if (groupName == "retransmission") return RETRANSMISSION;
     if (groupName == "icmp") return ICMP;
     if (groupName == "statistics") return STATISTICS;
+    if (groupName == "ratios") return RATIOS;
+    if (groupName == "entropy") return ENTROPY;
+    if (groupName == "protocol") return PROTOCOL;
+    if (groupName == "behavioral") return BEHAVIORAL;
+    if (groupName == "network") return NETWORK;
+    if (groupName == "higher_order") return HIGHER_ORDER;
     if (groupName == "all") return getAllFeatureNames();
     return {};
 }
@@ -1160,6 +1166,12 @@ std::set<std::string> FeatureGroups::getAllFeatureNames() {
     for (const auto& feature : RETRANSMISSION) allFeatures.insert(feature);
     for (const auto& feature : ICMP) allFeatures.insert(feature);
     for (const auto& feature : STATISTICS) allFeatures.insert(feature);
+    for (const auto& feature : RATIOS) allFeatures.insert(feature);
+    for (const auto& feature : ENTROPY) allFeatures.insert(feature);
+    for (const auto& feature : PROTOCOL) allFeatures.insert(feature);
+    for (const auto& feature : BEHAVIORAL) allFeatures.insert(feature);
+    for (const auto& feature : NETWORK) allFeatures.insert(feature);
+    for (const auto& feature : HIGHER_ORDER) allFeatures.insert(feature);
     
     return allFeatures;
 }
@@ -1172,7 +1184,9 @@ bool FeatureGroups::isValidFeatureName(const std::string& featureName) {
 bool FeatureGroups::isValidGroupName(const std::string& groupName) {
     return groupName == "basic" || groupName == "timing" || groupName == "flags" ||
            groupName == "bulk" || groupName == "window" || groupName == "retransmission" ||
-           groupName == "icmp" || groupName == "statistics" || groupName == "all";
+           groupName == "icmp" || groupName == "statistics" || groupName == "ratios" ||
+           groupName == "entropy" || groupName == "protocol" || groupName == "behavioral" ||
+           groupName == "network" || groupName == "higher_order" || groupName == "all";
 }
 
 // FlowFeatureExtractor feature selection helper methods
@@ -1242,116 +1256,151 @@ std::string FlowFeatureExtractor::getFeatureValue(const FlowFeatures& feature, c
     if (featureName == "Dst Port") return std::to_string(feature.dstPort);
     if (featureName == "Protocol") return std::to_string(static_cast<int>(feature.protocol));
     if (featureName == "Timestamp") return feature.timestamp;
-    if (featureName == "Flow Duration") return std::to_string(feature.flowDuration);
-    if (featureName == "Total Fwd Packet") return std::to_string(feature.totalFwdPackets);
-    if (featureName == "Total Bwd packets") return std::to_string(feature.totalBwdPackets);
-    if (featureName == "Total Length of Fwd Packet") return std::to_string(feature.totalLengthFwdPackets);
-    if (featureName == "Total Length of Bwd Packet") return std::to_string(feature.totalLengthBwdPackets);
-    if (featureName == "Fwd Packet Length Max") return std::to_string(feature.fwdPacketLengthMax);
-    if (featureName == "Fwd Packet Length Min") return std::to_string(feature.fwdPacketLengthMin);
-    if (featureName == "Fwd Packet Length Mean") return std::to_string(feature.fwdPacketLengthMean);
-    if (featureName == "Fwd Packet Length Std") return std::to_string(feature.fwdPacketLengthStd);
-    if (featureName == "Bwd Packet Length Max") return std::to_string(feature.bwdPacketLengthMax);
-    if (featureName == "Bwd Packet Length Min") return std::to_string(feature.bwdPacketLengthMin);
-    if (featureName == "Bwd Packet Length Mean") return std::to_string(feature.bwdPacketLengthMean);
-    if (featureName == "Bwd Packet Length Std") return std::to_string(feature.bwdPacketLengthStd);
-    if (featureName == "Flow Bytes/s") return std::to_string(feature.flowBytesPerSec);
-    if (featureName == "Flow Packets/s") return std::to_string(feature.flowPacketsPerSec);
-    if (featureName == "Fwd Packets/s") return std::to_string(feature.fwdPacketsPerSec);
-    if (featureName == "Bwd Packets/s") return std::to_string(feature.bwdPacketsPerSec);
-    if (featureName == "Flow IAT Mean") return std::to_string(feature.flowIATMean);
-    if (featureName == "Flow IAT Std") return std::to_string(feature.flowIATStd);
-    if (featureName == "Flow IAT Max") return std::to_string(feature.flowIATMax);
-    if (featureName == "Flow IAT Min") return std::to_string(feature.flowIATMin);
-    if (featureName == "Fwd IAT Total") return std::to_string(feature.fwdIATTotal);
-    if (featureName == "Fwd IAT Mean") return std::to_string(feature.fwdIATMean);
-    if (featureName == "Fwd IAT Std") return std::to_string(feature.fwdIATStd);
-    if (featureName == "Fwd IAT Max") return std::to_string(feature.fwdIATMax);
-    if (featureName == "Fwd IAT Min") return std::to_string(feature.fwdIATMin);
-    if (featureName == "Bwd IAT Total") return std::to_string(feature.bwdIATTotal);
-    if (featureName == "Bwd IAT Mean") return std::to_string(feature.bwdIATMean);
-    if (featureName == "Bwd IAT Std") return std::to_string(feature.bwdIATStd);
-    if (featureName == "Bwd IAT Max") return std::to_string(feature.bwdIATMax);
-    if (featureName == "Bwd IAT Min") return std::to_string(feature.bwdIATMin);
-    if (featureName == "Fwd PSH Flags") return std::to_string(feature.fwdPSHFlags);
-    if (featureName == "Bwd PSH Flags") return std::to_string(feature.bwdPSHFlags);
-    if (featureName == "Fwd URG Flags") return std::to_string(feature.fwdURGFlags);
-    if (featureName == "Bwd URG Flags") return std::to_string(feature.bwdURGFlags);
-    if (featureName == "Fwd RST Flags") return std::to_string(feature.fwdRSTFlags);
-    if (featureName == "Bwd RST Flags") return std::to_string(feature.bwdRSTFlags);
-    if (featureName == "Fwd Header Length") return std::to_string(feature.fwdHeaderLength);
-    if (featureName == "Bwd Header Length") return std::to_string(feature.bwdHeaderLength);
-    if (featureName == "Packet Length Min") return std::to_string(feature.packetLengthMin);
-    if (featureName == "Packet Length Max") return std::to_string(feature.packetLengthMax);
-    if (featureName == "Packet Length Mean") return std::to_string(feature.packetLengthMean);
-    if (featureName == "Packet Length Std") return std::to_string(feature.packetLengthStd);
-    if (featureName == "Packet Length Variance") return std::to_string(feature.packetLengthVariance);
-    if (featureName == "FIN Flag Count") return std::to_string(feature.finFlagCount);
-    if (featureName == "SYN Flag Count") return std::to_string(feature.synFlagCount);
-    if (featureName == "RST Flag Count") return std::to_string(feature.rstFlagCount);
-    if (featureName == "PSH Flag Count") return std::to_string(feature.pshFlagCount);
-    if (featureName == "ACK Flag Count") return std::to_string(feature.ackFlagCount);
-    if (featureName == "URG Flag Count") return std::to_string(feature.urgFlagCount);
-    if (featureName == "CWR Flag Count") return std::to_string(feature.cwrFlagCount);
-    if (featureName == "ECE Flag Count") return std::to_string(feature.eceFlagCount);
-    if (featureName == "Down/Up Ratio") return std::to_string(feature.downUpRatio);
-    if (featureName == "Average Packet Size") return std::to_string(feature.averagePacketSize);
-    if (featureName == "Fwd Segment Size Avg") return std::to_string(feature.fwdSegmentSizeAvg);
-    if (featureName == "Bwd Segment Size Avg") return std::to_string(feature.bwdSegmentSizeAvg);
-    if (featureName == "Fwd Bytes/Bulk Avg") return std::to_string(feature.fwdBytesBulkAvg);
-    if (featureName == "Fwd Packet/Bulk Avg") return std::to_string(feature.fwdPacketBulkAvg);
-    if (featureName == "Fwd Bulk Rate Avg") return std::to_string(feature.fwdBulkRateAvg);
-    if (featureName == "Bwd Bytes/Bulk Avg") return std::to_string(feature.bwdBytesBulkAvg);
-    if (featureName == "Bwd Packet/Bulk Avg") return std::to_string(feature.bwdPacketBulkAvg);
-    if (featureName == "Bwd Bulk Rate Avg") return std::to_string(feature.bwdBulkRateAvg);
-    if (featureName == "Subflow Fwd Packets") return std::to_string(feature.subflowFwdPackets);
-    if (featureName == "Subflow Fwd Bytes") return std::to_string(feature.subflowFwdBytes);
-    if (featureName == "Subflow Bwd Packets") return std::to_string(feature.subflowBwdPackets);
-    if (featureName == "Subflow Bwd Bytes") return std::to_string(feature.subflowBwdBytes);
-    if (featureName == "FWD Init Win Bytes") return std::to_string(feature.fwdInitWinBytes);
-    if (featureName == "Bwd Init Win Bytes") return std::to_string(feature.bwdInitWinBytes);
-    if (featureName == "Fwd Act Data Pkts") return std::to_string(feature.fwdActDataPkts);
-    if (featureName == "Bwd Act Data Pkts") return std::to_string(feature.bwdActDataPkts);
-    if (featureName == "Fwd Seg Size Min") return std::to_string(feature.fwdSegSizeMin);
-    if (featureName == "Bwd Seg Size Min") return std::to_string(feature.bwdSegSizeMin);
-    if (featureName == "Active Mean") return std::to_string(feature.activeMean);
-    if (featureName == "Active Std") return std::to_string(feature.activeStd);
-    if (featureName == "Active Max") return std::to_string(feature.activeMax);
-    if (featureName == "Active Min") return std::to_string(feature.activeMin);
-    if (featureName == "Idle Mean") return std::to_string(feature.idleMean);
-    if (featureName == "Idle Std") return std::to_string(feature.idleStd);
-    if (featureName == "Idle Max") return std::to_string(feature.idleMax);
-    if (featureName == "Idle Min") return std::to_string(feature.idleMin);
-    if (featureName == "ICMP Code") return std::to_string(static_cast<int>(feature.icmpCode));
-    if (featureName == "ICMP Type") return std::to_string(static_cast<int>(feature.icmpType));
-    if (featureName == "Fwd TCP Retrans. Count") return std::to_string(feature.fwdTCPRetransCount);
-    if (featureName == "Bwd TCP Retrans. Count") return std::to_string(feature.bwdTCPRetransCount);
-    if (featureName == "Total TCP Retrans. Count") return std::to_string(feature.totalTCPRetransCount);
-    if (featureName == "Total Connection Flow Time") return std::to_string(feature.totalConnectionFlowTime);
+    if (featureName == "Flow Duration") return formatNumber(feature.flowDuration);
+    if (featureName == "Total Fwd Packet") return formatNumber(feature.totalFwdPackets);
+    if (featureName == "Total Bwd packets") return formatNumber(feature.totalBwdPackets);
+    if (featureName == "Total Length of Fwd Packet") return formatNumber(feature.totalLengthFwdPackets);
+    if (featureName == "Total Length of Bwd Packet") return formatNumber(feature.totalLengthBwdPackets);
+    if (featureName == "Fwd Packet Length Max") return formatNumber(feature.fwdPacketLengthMax);
+    if (featureName == "Fwd Packet Length Min") return formatNumber(feature.fwdPacketLengthMin);
+    if (featureName == "Fwd Packet Length Mean") return formatNumber(feature.fwdPacketLengthMean);
+    if (featureName == "Fwd Packet Length Std") return formatNumber(feature.fwdPacketLengthStd);
+    if (featureName == "Bwd Packet Length Max") return formatNumber(feature.bwdPacketLengthMax);
+    if (featureName == "Bwd Packet Length Min") return formatNumber(feature.bwdPacketLengthMin);
+    if (featureName == "Bwd Packet Length Mean") return formatNumber(feature.bwdPacketLengthMean);
+    if (featureName == "Bwd Packet Length Std") return formatNumber(feature.bwdPacketLengthStd);
+    if (featureName == "Flow Bytes/s") return formatNumber(feature.flowBytesPerSec);
+    if (featureName == "Flow Packets/s") return formatNumber(feature.flowPacketsPerSec);
+    if (featureName == "Fwd Packets/s") return formatNumber(feature.fwdPacketsPerSec);
+    if (featureName == "Bwd Packets/s") return formatNumber(feature.bwdPacketsPerSec);
+    if (featureName == "Flow IAT Mean") return formatNumber(feature.flowIATMean);
+    if (featureName == "Flow IAT Std") return formatNumber(feature.flowIATStd);
+    if (featureName == "Flow IAT Max") return formatNumber(feature.flowIATMax);
+    if (featureName == "Flow IAT Min") return formatNumber(feature.flowIATMin);
+    if (featureName == "Fwd IAT Total") return formatNumber(feature.fwdIATTotal);
+    if (featureName == "Fwd IAT Mean") return formatNumber(feature.fwdIATMean);
+    if (featureName == "Fwd IAT Std") return formatNumber(feature.fwdIATStd);
+    if (featureName == "Fwd IAT Max") return formatNumber(feature.fwdIATMax);
+    if (featureName == "Fwd IAT Min") return formatNumber(feature.fwdIATMin);
+    if (featureName == "Bwd IAT Total") return formatNumber(feature.bwdIATTotal);
+    if (featureName == "Bwd IAT Mean") return formatNumber(feature.bwdIATMean);
+    if (featureName == "Bwd IAT Std") return formatNumber(feature.bwdIATStd);
+    if (featureName == "Bwd IAT Max") return formatNumber(feature.bwdIATMax);
+    if (featureName == "Bwd IAT Min") return formatNumber(feature.bwdIATMin);
+    if (featureName == "Fwd PSH Flags") return formatNumber(feature.fwdPSHFlags);
+    if (featureName == "Bwd PSH Flags") return formatNumber(feature.bwdPSHFlags);
+    if (featureName == "Fwd URG Flags") return formatNumber(feature.fwdURGFlags);
+    if (featureName == "Bwd URG Flags") return formatNumber(feature.bwdURGFlags);
+    if (featureName == "Fwd RST Flags") return formatNumber(feature.fwdRSTFlags);
+    if (featureName == "Bwd RST Flags") return formatNumber(feature.bwdRSTFlags);
+    if (featureName == "Fwd Header Length") return formatNumber(feature.fwdHeaderLength);
+    if (featureName == "Bwd Header Length") return formatNumber(feature.bwdHeaderLength);
+    if (featureName == "Packet Length Min") return formatNumber(feature.packetLengthMin);
+    if (featureName == "Packet Length Max") return formatNumber(feature.packetLengthMax);
+    if (featureName == "Packet Length Mean") return formatNumber(feature.packetLengthMean);
+    if (featureName == "Packet Length Std") return formatNumber(feature.packetLengthStd);
+    if (featureName == "Packet Length Variance") return formatNumber(feature.packetLengthVariance);
+    if (featureName == "FIN Flag Count") return formatNumber(feature.finFlagCount);
+    if (featureName == "SYN Flag Count") return formatNumber(feature.synFlagCount);
+    if (featureName == "RST Flag Count") return formatNumber(feature.rstFlagCount);
+    if (featureName == "PSH Flag Count") return formatNumber(feature.pshFlagCount);
+    if (featureName == "ACK Flag Count") return formatNumber(feature.ackFlagCount);
+    if (featureName == "URG Flag Count") return formatNumber(feature.urgFlagCount);
+    if (featureName == "CWR Flag Count") return formatNumber(feature.cwrFlagCount);
+    if (featureName == "ECE Flag Count") return formatNumber(feature.eceFlagCount);
+    if (featureName == "Down/Up Ratio") return formatNumber(feature.downUpRatio);
+    if (featureName == "Average Packet Size") return formatNumber(feature.averagePacketSize);
+    if (featureName == "Fwd Segment Size Avg") return formatNumber(feature.fwdSegmentSizeAvg);
+    if (featureName == "Bwd Segment Size Avg") return formatNumber(feature.bwdSegmentSizeAvg);
+    if (featureName == "Fwd Bytes/Bulk Avg") return formatNumber(feature.fwdBytesBulkAvg);
+    if (featureName == "Fwd Packet/Bulk Avg") return formatNumber(feature.fwdPacketBulkAvg);
+    if (featureName == "Fwd Bulk Rate Avg") return formatNumber(feature.fwdBulkRateAvg);
+    if (featureName == "Bwd Bytes/Bulk Avg") return formatNumber(feature.bwdBytesBulkAvg);
+    if (featureName == "Bwd Packet/Bulk Avg") return formatNumber(feature.bwdPacketBulkAvg);
+    if (featureName == "Bwd Bulk Rate Avg") return formatNumber(feature.bwdBulkRateAvg);
+    if (featureName == "Subflow Fwd Packets") return formatNumber(feature.subflowFwdPackets);
+    if (featureName == "Subflow Fwd Bytes") return formatNumber(feature.subflowFwdBytes);
+    if (featureName == "Subflow Bwd Packets") return formatNumber(feature.subflowBwdPackets);
+    if (featureName == "Subflow Bwd Bytes") return formatNumber(feature.subflowBwdBytes);
+    if (featureName == "FWD Init Win Bytes") return formatNumber(feature.fwdInitWinBytes);
+    if (featureName == "Bwd Init Win Bytes") return formatNumber(feature.bwdInitWinBytes);
+    if (featureName == "Fwd Act Data Pkts") return formatNumber(feature.fwdActDataPkts);
+    if (featureName == "Bwd Act Data Pkts") return formatNumber(feature.bwdActDataPkts);
+    if (featureName == "Fwd Seg Size Min") return formatNumber(feature.fwdSegSizeMin);
+    if (featureName == "Bwd Seg Size Min") return formatNumber(feature.bwdSegSizeMin);
+    if (featureName == "Active Mean") return formatNumber(feature.activeMean);
+    if (featureName == "Active Std") return formatNumber(feature.activeStd);
+    if (featureName == "Active Max") return formatNumber(feature.activeMax);
+    if (featureName == "Active Min") return formatNumber(feature.activeMin);
+    if (featureName == "Idle Mean") return formatNumber(feature.idleMean);
+    if (featureName == "Idle Std") return formatNumber(feature.idleStd);
+    if (featureName == "Idle Max") return formatNumber(feature.idleMax);
+    if (featureName == "Idle Min") return formatNumber(feature.idleMin);
+    if (featureName == "ICMP Code") return formatNumber(static_cast<int>(feature.icmpCode));
+    if (featureName == "ICMP Type") return formatNumber(static_cast<int>(feature.icmpType));
+    if (featureName == "Fwd TCP Retrans. Count") return formatNumber(feature.fwdTCPRetransCount);
+    if (featureName == "Bwd TCP Retrans. Count") return formatNumber(feature.bwdTCPRetransCount);
+    if (featureName == "Total TCP Retrans. Count") return formatNumber(feature.totalTCPRetransCount);
+    if (featureName == "Total Connection Flow Time") return formatNumber(feature.totalConnectionFlowTime);
     
     // New features
-    if (featureName == "Fwd/Bwd Packet Ratio") return std::to_string(feature.fwdBwdPacketRatio);
-    if (featureName == "Fwd/Bwd Byte Ratio") return std::to_string(feature.fwdBwdByteRatio);
-    if (featureName == "Average Packet Rate") return std::to_string(feature.averagePacketRate);
-    if (featureName == "Payload Entropy") return std::to_string(feature.payloadEntropy);
-    if (featureName == "Header Entropy") return std::to_string(feature.headerEntropy);
+    if (featureName == "Fwd/Bwd Packet Ratio") return formatNumber(feature.fwdBwdPacketRatio);
+    if (featureName == "Fwd/Bwd Byte Ratio") return formatNumber(feature.fwdBwdByteRatio);
+    if (featureName == "Average Packet Rate") return formatNumber(feature.averagePacketRate);
+    if (featureName == "Payload Entropy") return formatNumber(feature.payloadEntropy);
+    if (featureName == "Header Entropy") return formatNumber(feature.headerEntropy);
     if (featureName == "Application Protocol") return feature.applicationProtocol;
-    if (featureName == "TLS Certificate Count") return std::to_string(feature.tlsCertificateCount);
-    if (featureName == "TLS Session ID Length") return std::to_string(feature.tlsSessionIdLength);
+    if (featureName == "TLS Certificate Count") return formatNumber(feature.tlsCertificateCount);
+    if (featureName == "TLS Session ID Length") return formatNumber(feature.tlsSessionIdLength);
     if (featureName == "TLS Cipher Suite") return feature.tlsCipherSuite;
-    if (featureName == "Burstiness") return std::to_string(feature.burstiness);
-    if (featureName == "Packet Inter-Arrival Jitter") return std::to_string(feature.packetInterArrivalJitter);
-    if (featureName == "Direction Change Count") return std::to_string(feature.directionChangeCount);
-    if (featureName == "Average Idle Time") return std::to_string(feature.averageIdleTime);
-    if (featureName == "Flow Persistence") return std::to_string(feature.flowPersistence);
+    if (featureName == "Burstiness") return formatNumber(feature.burstiness);
+    if (featureName == "Packet Inter-Arrival Jitter") return formatNumber(feature.packetInterArrivalJitter);
+    if (featureName == "Direction Change Count") return formatNumber(feature.directionChangeCount);
+    if (featureName == "Average Idle Time") return formatNumber(feature.averageIdleTime);
+    if (featureName == "Flow Persistence") return formatNumber(feature.flowPersistence);
     if (featureName == "Internal/External Flag") return feature.isInternalExternal ? "1" : "0";
     if (featureName == "Port Category") return feature.portCategory;
-    if (featureName == "Packet Length Skewness") return std::to_string(feature.packetLengthSkewness);
-    if (featureName == "Packet Length Kurtosis") return std::to_string(feature.packetLengthKurtosis);
-    if (featureName == "IAT Skewness") return std::to_string(feature.iatSkewness);
-    if (featureName == "IAT Kurtosis") return std::to_string(feature.iatKurtosis);
+    if (featureName == "Packet Length Skewness") return formatNumber(feature.packetLengthSkewness);
+    if (featureName == "Packet Length Kurtosis") return formatNumber(feature.packetLengthKurtosis);
+    if (featureName == "IAT Skewness") return formatNumber(feature.iatSkewness);
+    if (featureName == "IAT Kurtosis") return formatNumber(feature.iatKurtosis);
     
     return "0"; // Default value for unknown features
+}
+
+// Number formatting helpers
+std::string FlowFeatureExtractor::formatNumber(double value) const {
+    // For integer values (0.0, 1.0, etc.), return without decimal places
+    if (value == static_cast<int>(value)) {
+        return std::to_string(static_cast<int>(value));
+    }
+    
+    // For floating-point values, use configured precision
+    std::ostringstream oss;
+    oss << std::fixed << std::setprecision(config_.precision) << value;
+    std::string result = oss.str();
+    
+    // Remove trailing zeros after decimal point
+    if (result.find('.') != std::string::npos) {
+        result = result.substr(0, result.find_last_not_of('0') + 1);
+        if (result.back() == '.') {
+            result.pop_back();
+        }
+    }
+    
+    return result;
+}
+
+std::string FlowFeatureExtractor::formatNumber(int value) const {
+    return std::to_string(value);
+}
+
+std::string FlowFeatureExtractor::formatNumber(uint32_t value) const {
+    return std::to_string(value);
+}
+
+std::string FlowFeatureExtractor::formatNumber(uint64_t value) const {
+    return std::to_string(value);
 }
 
 // Helper functions for new feature calculations

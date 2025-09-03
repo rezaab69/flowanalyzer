@@ -471,6 +471,12 @@ private:
     std::set<std::string> resolveSelectedFeatures() const;
     std::vector<std::string> getCSVHeader(const std::set<std::string>& selectedFeatures) const;
     std::string getFeatureValue(const FlowFeatures& feature, const std::string& featureName) const;
+    
+    // Number formatting helper
+    std::string formatNumber(double value) const;
+    std::string formatNumber(int value) const;
+    std::string formatNumber(uint32_t value) const;
+    std::string formatNumber(uint64_t value) const;
 };
 
 // Configuration helper functions
