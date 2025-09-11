@@ -45,6 +45,11 @@ struct Config {
     int precision = 6;
     bool verbose = false;
     
+    // Adaptive number formatting settings
+    bool enableAdaptiveFormatting = true;  // Enable adaptive fractional digit reduction
+    int integerThreshold = 6;               // Threshold for integer part length
+    int maxTotalLength = 12;                // Maximum total number length (integer + fractional)
+    
     // Streaming processing settings
     bool enableStreaming = false;     // Process packets without storing them
     int streamingBufferSize = 100;    // Number of packets to buffer for statistics

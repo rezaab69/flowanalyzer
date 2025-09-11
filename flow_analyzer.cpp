@@ -1375,13 +1375,40 @@ std::string FlowFeatureExtractor::formatNumber(double value) const {
         return std::to_string(static_cast<int>(value));
     }
     
-    // For floating-point values, use configured precision
+    // Calculate adaptive precision if enabled
+    int adaptivePrecision = config_.precision;
+    
+    if (config_.enableAdaptiveFormatting) {
+        // Get the integer part length
+        std::string integerPart = std::to_string(static_cast<long long>(std::abs(value)));
+        int integerLength = integerPart.length();
+        
+        // Add 1 for negative sign if value is negative
+        if (value < 0) {
+            integerLength += 1;
+        }
+        
+        // If integer part exceeds threshold, reduce fractional digits proportionally
+        if (integerLength > config_.integerThreshold) {
+            int availableSpace = config_.maxTotalLength - integerLength - 1; // -1 for decimal point
+            if (availableSpace > 0) {
+                adaptivePrecision = std::min(adaptivePrecision, availableSpace);
+            } else {
+                adaptivePrecision = 0; // No space for fractional digits
+            }
+        }
+        
+        // Ensure precision is not negative
+        adaptivePrecision = std::max(0, adaptivePrecision);
+    }
+    
+    // For floating-point values, use adaptive precision
     std::ostringstream oss;
-    oss << std::fixed << std::setprecision(config_.precision) << value;
+    oss << std::fixed << std::setprecision(adaptivePrecision) << value;
     std::string result = oss.str();
     
-    // Remove trailing zeros after decimal point
-    if (result.find('.') != std::string::npos) {
+    // Remove trailing zeros after decimal point (only if we have fractional digits)
+    if (adaptivePrecision > 0 && result.find('.') != std::string::npos) {
         result = result.substr(0, result.find_last_not_of('0') + 1);
         if (result.back() == '.') {
             result.pop_back();
